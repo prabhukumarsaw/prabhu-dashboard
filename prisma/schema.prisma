@@ -1,0 +1,348 @@
+// IAM SaaS - Prisma Schema
+// Supports: RBAC, ABAC, PBAC, ACL, Multi-tenant, Sessions, OTP
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============== MULTI-TENANT ==============
+model Tenant {
+  id          String   @id @default(uuid())
+  name        String
+  slug        String   @unique
+  domain      String?  @unique
+  logo        String?
+  settings    Json?    // tenant-specific config
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users       User[]
+  roles       Role[]
+  modules     TenantModule[]
+  menus       Menu[]
+  policies    Policy[]
+  aclEntries  ACLEntry[]
+}
+
+// ============== MODULES (for future extensibility) ==============
+model Module {
+  id          String   @id @default(uuid())
+  name        String
+  code        String   @unique  // e.g. "billing", "reports"
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  tenantModules TenantModule[]
+  permissions   Permission[]
+  menus         Menu[]
+}
+
+model TenantModule {
+  id        String   @id @default(uuid())
+  tenantId  String
+  moduleId  String
+  isEnabled Boolean  @default(true)
+  config    Json?
+  createdAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  module Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, moduleId])
+  @@index([tenantId])
+  @@index([moduleId])
+}
+
+// ============== USER ==============
+model User {
+  id            String    @id @default(uuid())
+  tenantId      String
+  email         String
+  username      String?
+  passwordHash  String?   // null for OAuth-only users
+  firstName     String?
+  lastName      String?
+  avatar        String?
+  phone         String?
+  locale        String?   @default("en")
+  timezone      String?   @default("UTC")
+  isActive      Boolean   @default(true)
+  emailVerified Boolean   @default(false)
+  mfaEnabled    Boolean   @default(false)
+  mfaSecret     String?   // TOTP secret
+  lastLoginAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userRoles     UserRole[]
+  sessions      Session[]
+  otpCodes      OTPCode[]
+  userAttributes UserAttribute[]
+  oAuthAccounts OAuthAccount[]
+  refreshTokens RefreshToken[]
+
+  @@unique([tenantId, email])
+  @@unique([tenantId, username])
+  @@index([tenantId])
+  @@index([email])
+}
+
+model OAuthAccount {
+  id          String   @id @default(uuid())
+  userId      String
+  provider    String   // google, facebook
+  providerId  String
+  accessToken String?
+  refreshToken String?
+  expiresAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerId])
+  @@index([userId])
+}
+
+// ============== RBAC: Roles & Permissions ==============
+model Role {
+  id          String   @id @default(uuid())
+  tenantId    String
+  name        String
+  code        String   // e.g. "admin", "editor"
+  description String?
+  isSystem    Boolean  @default(false) // system roles cannot be deleted
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userRoles    UserRole[]
+  rolePermissions RolePermission[]
+  roleMenus    RoleMenu[]
+}
+
+model Permission {
+  id          String   @id @default(uuid())
+  moduleId    String?
+  name        String
+  code        String   @unique  // e.g. "user:create", "report:read"
+  resource    String?  // resource type for ABAC
+  action      String?  // action type
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  module       Module?          @relation(fields: [moduleId], references: [id], onDelete: SetNull)
+  rolePermissions RolePermission[]
+}
+
+model UserRole {
+  id        String   @id @default(uuid())
+  userId    String
+  roleId    String
+  scope     Json?    // optional scope (e.g. department id) for scoped RBAC
+  expiresAt DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@index([userId])
+  @@index([roleId])
+}
+
+model RolePermission {
+  id           String   @id @default(uuid())
+  roleId       String
+  permissionId String
+  conditions   Json?    // optional ABAC-like conditions on this assignment
+  createdAt    DateTime @default(now())
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@index([roleId])
+  @@index([permissionId])
+}
+
+// ============== ABAC: User Attributes ==============
+model AttributeDefinition {
+  id        String   @id @default(uuid())
+  name      String   @unique  // e.g. "department", "clearance_level"
+  type      String   // string, number, boolean, array
+  description String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  userAttributes UserAttribute[]
+  policyRules    PolicyRule[]
+}
+
+model UserAttribute {
+  id         String   @id @default(uuid())
+  userId     String
+  attributeId String
+  value      Json     // flexible value
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attribute AttributeDefinition @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, attributeId])
+  @@index([userId])
+  @@index([attributeId])
+}
+
+// ============== PBAC: Policies ==============
+model Policy {
+  id          String   @id @default(uuid())
+  tenantId    String
+  name        String
+  code        String
+  description String?
+  effect      String   // ALLOW, DENY
+  priority    Int      @default(0)  // higher = evaluated first
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  rules  PolicyRule[]
+}
+
+model PolicyRule {
+  id         String   @id @default(uuid())
+  policyId   String
+  attributeId String?
+  operator   String   // eq, ne, in, contains, gte, lte, etc.
+  value      Json
+  createdAt  DateTime @default(now())
+
+  policy    Policy             @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  attribute AttributeDefinition? @relation(fields: [attributeId], references: [id], onDelete: SetNull)
+
+  @@index([policyId])
+}
+
+// ============== ACL: Access Control List ==============
+model ACLEntry {
+  id         String   @id @default(uuid())
+  tenantId   String
+  subjectType String  // user, role, group
+  subjectId  String
+  resourceType String // e.g. "document", "project"
+  resourceId String?
+  permission String  // e.g. "read", "write", "admin"
+  conditions Json?   // optional conditions
+  createdAt  DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([subjectType, subjectId])
+  @@index([resourceType, resourceId])
+}
+
+// ============== MENUS (per-tenant, per-role) ==============
+model Menu {
+  id        String   @id @default(uuid())
+  tenantId  String
+  moduleId  String?
+  parentId  String?
+  title     String
+  path      String?
+  icon      String?
+  order     Int      @default(0)
+  permissionCode String?  // required permission to see this menu
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant   Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  module   Module? @relation(fields: [moduleId], references: [id], onDelete: SetNull)
+  parent   Menu?   @relation("MenuHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children Menu[]  @relation("MenuHierarchy")
+  roleMenus RoleMenu[]
+}
+
+model RoleMenu {
+  id      String @id @default(uuid())
+  roleId  String
+  menuId  String
+  createdAt DateTime @default(now())
+
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  menu Menu @relation(fields: [menuId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, menuId])
+  @@index([roleId])
+  @@index([menuId])
+}
+
+// Add RoleMenu relation to Role
+// (Role already exists, add relation)
+// We need to add roleMenus to Role model - editing schema
+
+// ============== SESSIONS ==============
+model Session {
+  id           String   @id @default(uuid())
+  userId       String
+  tenantId     String
+  tokenHash    String?  // hashed refresh/session token
+  ip           String?
+  userAgent    String?
+  deviceInfo   Json?
+  expiresAt    DateTime
+  revokedAt   DateTime?
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tenantId])
+  @@index([expiresAt])
+}
+
+// ============== OTP (2FA / magic link) ==============
+model OTPCode {
+  id        String   @id @default(uuid())
+  userId    String
+  code      String   // hashed
+  type      String   // login_otp, mfa_verify, password_reset, email_verify
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+// ============== REFRESH TOKENS (JWT) ==============
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  tokenHash String
+  deviceId  String?
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+}
