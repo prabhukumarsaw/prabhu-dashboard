@@ -37,4 +37,4 @@ export const config = {
   },
 
   defaultTenantId: process.env.DEFAULT_TENANT_ID || 'default',
-} as const;
+};

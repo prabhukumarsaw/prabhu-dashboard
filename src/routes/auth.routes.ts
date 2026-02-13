@@ -1,11 +1,11 @@
-import { Router } from 'express';
+import { Router, type Router as ExpressRouter } from 'express';
 import passport from '../config/passport';
 import { authRequired } from '../middleware';
 import * as authController from '../controllers/auth.controller';
 import { body } from 'express-validator';
 import { validate } from '../lib';
 
-const router = Router();
+const router: ExpressRouter = Router();
 
 router.post(
   '/register',

@@ -13,24 +13,24 @@ export type TokenPayload = {
 };
 
 export function signAccessToken(payload: Omit<TokenPayload, 'type' | 'iat' | 'exp' | 'iss'>): string {
-  return jwt.sign(
-    { ...payload, type: 'access' },
-    config.jwt.secret,
-    { expiresIn: config.jwt.accessExpiry, issuer: config.jwt.issuer }
-  );
+  const tokenPayload = { ...payload, type: 'access' as const };
+  const secret = String(config.jwt.secret);
+  const expiresIn = String(config.jwt.accessExpiry);
+  const issuer = String(config.jwt.issuer);
+  return jwt.sign(tokenPayload, secret, { expiresIn, issuer } as jwt.SignOptions);
 }
 
 export function signRefreshToken(payload: Omit<TokenPayload, 'type' | 'iat' | 'exp' | 'iss'>): string {
-  return jwt.sign(
-    { ...payload, type: 'refresh' },
-    config.jwt.secret,
-    { expiresIn: config.jwt.refreshExpiry, issuer: config.jwt.issuer }
-  );
+  const tokenPayload = { ...payload, type: 'refresh' as const };
+  const secret = String(config.jwt.secret);
+  const expiresIn = String(config.jwt.refreshExpiry);
+  const issuer = String(config.jwt.issuer);
+  return jwt.sign(tokenPayload, secret, { expiresIn, issuer } as jwt.SignOptions);
 }
 
 export function verifyToken(token: string): TokenPayload {
-  const decoded = jwt.verify(token, config.jwt.secret, {
-    issuer: config.jwt.issuer,
+  const decoded = jwt.verify(token, String(config.jwt.secret), {
+    issuer: String(config.jwt.issuer),
   }) as TokenPayload;
   return decoded;
 }

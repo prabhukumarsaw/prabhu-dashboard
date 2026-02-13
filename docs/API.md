@@ -231,3 +231,355 @@ All require authentication.
 - `500` – Server error.
 
 Response shape: `{ success: false, message: string, errors?: array }`
+
+
+# New Features Implementation Summary
+
+This document summarizes all the new features added to transform the IAM backend into an advanced SaaS dashboard.
+
+## ✅ Implemented Features
+
+### 1. **Notifications System** (`src/services/notification.service.ts`)
+**Status**: ✅ Complete
+
+**Features**:
+- ✅ In-app notifications with read/unread status
+- ✅ Email notifications via nodemailer
+- ✅ Push notifications (placeholder for web-push/FCM)
+- ✅ SMS notifications (placeholder for Twilio/AWS SNS)
+- ✅ Notification preferences per user
+- ✅ Notification templates
+- ✅ Bulk notifications
+- ✅ Notification statistics
+
+**API Endpoints**:
+- `POST /api/v1/notifications` - Create notification
+- `POST /api/v1/notifications/bulk` - Bulk notifications
+- `GET /api/v1/notifications` - List user notifications
+- `GET /api/v1/notifications/unread/count` - Unread count
+- `PATCH /api/v1/notifications/:id/read` - Mark as read
+- `PATCH /api/v1/notifications/read-all` - Mark all as read
+- `DELETE /api/v1/notifications/:id` - Delete notification
+- `GET /api/v1/notifications/preferences` - Get preferences
+- `PATCH /api/v1/notifications/preferences` - Update preference
+- `GET /api/v1/notifications/stats` - Statistics
+
+**Usage Example**:
+```typescript
+import * as notificationService from './services/notification.service';
+
+// Create notification
+await notificationService.createNotification({
+  tenantId: 'tenant-id',
+  userId: 'user-id',
+  type: 'info',
+  title: 'Welcome!',
+  message: 'Your account has been created',
+  actionUrl: '/dashboard',
+  sendEmail: true,
+});
+
+// Send from template
+await notificationService.sendNotificationFromTemplate(
+  'tenant-id',
+  'user-id',
+  'user.welcome',
+  { name: 'John' }
+);
+```
+
+---
+
+### 2. **File Storage & Management** (`src/services/file.service.ts`)
+**Status**: ✅ Complete
+
+**Features**:
+- ✅ File upload with multer
+- ✅ Local file storage
+- ✅ File sharing with password protection
+- ✅ Expiring share links
+- ✅ Download limits
+- ✅ Storage quotas per tenant
+- ✅ File statistics
+- ✅ MIME type validation
+- ✅ File size limits
+
+**API Endpoints**:
+- `POST /api/v1/files` - Upload file
+- `GET /api/v1/files` - List files
+- `GET /api/v1/files/:id` - Get file info
+- `GET /api/v1/files/:id/download` - Download file
+- `DELETE /api/v1/files/:id` - Delete file
+- `POST /api/v1/files/:fileId/share` - Create share link
+- `GET /api/v1/files/share/:token` - Access shared file
+- `GET /api/v1/files/:fileId/shares` - List shares
+- `DELETE /api/v1/files/:fileId/share/:token` - Revoke share
+- `GET /api/v1/files/storage/usage` - Storage usage
+- `GET /api/v1/files/stats` - File statistics
+
+**Configuration**:
+- `UPLOAD_DIR` - Upload directory (default: `./uploads`)
+- `MAX_FILE_SIZE` - Max file size in bytes (default: 100MB)
+- `DEFAULT_STORAGE_QUOTA` - Default storage quota (default: 1GB)
+- `DEFAULT_FILE_QUOTA` - Default file count quota (default: 1000)
+
+---
+
+### 3. **Advanced Search & Filtering** (`src/services/search.service.ts`)
+**Status**: ✅ Complete
+
+**Features**:
+- ✅ Full-text search across resources
+- ✅ Advanced filters (eq, ne, gt, gte, lt, lte, in, contains, etc.)
+- ✅ Date range filtering
+- ✅ Saved searches
+- ✅ Search suggestions
+- ✅ Global search across all resource types
+- ✅ Resource-specific search implementations
+
+**Supported Resources**:
+- Users
+- Roles
+- Permissions
+- Files
+- Menus
+- Policies
+- Tenants
+
+**API Endpoints**:
+- `POST /api/v1/search` - Advanced search
+- `GET /api/v1/search/global` - Global search
+- `POST /api/v1/search/saved` - Save search
+- `GET /api/v1/search/saved` - List saved searches
+- `DELETE /api/v1/search/saved/:id` - Delete saved search
+- `GET /api/v1/search/suggestions` - Get suggestions
+
+**Usage Example**:
+```typescript
+import * as searchService from './services/search.service';
+
+// Advanced search
+const results = await searchService.searchResources({
+  tenantId: 'tenant-id',
+  resourceType: 'user',
+  query: 'john',
+  filters: [
+    { field: 'isActive', operator: 'eq', value: true },
+    { field: 'createdAt', operator: 'gte', value: new Date('2024-01-01') },
+  ],
+  page: 1,
+  limit: 20,
+});
+
+// Global search
+const globalResults = await searchService.globalSearch(
+  'tenant-id',
+  'search query',
+  ['user', 'role'],
+  20
+);
+```
+
+---
+
+### 4. **Export & Import** (`src/services/export-import.service.ts`)
+**Status**: ✅ Complete
+
+**Features**:
+- ✅ Export to CSV, JSON, XLSX
+- ✅ Import from CSV, JSON, XLSX
+- ✅ Field selection
+- ✅ Filtered exports
+- ✅ Bulk import with validation
+- ✅ Error handling and reporting
+- ✅ Job tracking
+- ✅ Update existing records option
+
+**Supported Resources**:
+- Users
+- Roles
+- Permissions
+- Menus
+
+**API Endpoints**:
+- `POST /api/v1/export-import/export` - Export resources
+- `GET /api/v1/export-import/export/:jobId` - Get export job
+- `POST /api/v1/export-import/import` - Import resources
+- `GET /api/v1/export-import/import/:jobId` - Get import job
+- `GET /api/v1/export-import/jobs` - List jobs
+
+**Usage Example**:
+```typescript
+import * as exportImportService from './services/export-import.service';
+
+// Export users
+const exportResult = await exportImportService.exportResources({
+  tenantId: 'tenant-id',
+  userId: 'user-id',
+  resourceType: 'user',
+  format: 'csv',
+  filters: { isActive: true },
+  fields: ['email', 'firstName', 'lastName'],
+});
+
+// Import users
+const importResult = await exportImportService.importResources({
+  tenantId: 'tenant-id',
+  userId: 'user-id',
+  resourceType: 'user',
+  format: 'csv',
+  fileId: 'file-id',
+  options: {
+    skipErrors: false,
+    updateExisting: true,
+  },
+});
+```
+
+---
+
+### 5. **Real-time Features** (`src/services/realtime.service.ts`)
+**Status**: ✅ Complete
+
+**Features**:
+- ✅ WebSocket support via Socket.IO
+- ✅ Server-Sent Events (SSE)
+- ✅ Real-time notifications
+- ✅ Live activity feed
+- ✅ User presence tracking
+- ✅ Room subscriptions
+- ✅ Connection management
+
+**API Endpoints**:
+- `GET /api/v1/realtime/sse` - SSE endpoint
+- WebSocket: `/socket.io` - WebSocket connection
+
+**Usage Example**:
+```typescript
+import { emitToUser, sendRealtimeNotification } from './services/realtime.service';
+
+// Send real-time notification
+sendRealtimeNotification('user-id', 'tenant-id', {
+  id: 'notification-id',
+  type: 'info',
+  title: 'New Message',
+  message: 'You have a new message',
+});
+
+// Emit custom event
+emitToUser('user-id', 'custom-event', {
+  data: 'custom data',
+});
+```
+
+**Client-side (Socket.IO)**:
+```javascript
+import io from 'socket.io-client';
+
+const socket = io('http://localhost:5177', {
+  auth: {
+    token: 'your-access-token'
+  }
+});
+
+socket.on('connected', (data) => {
+  console.log('Connected', data);
+});
+
+socket.on('notification', (data) => {
+  console.log('New notification', data);
+});
+
+socket.on('activity', (data) => {
+  console.log('Activity update', data);
+});
+```
+
+---
+
+## 📦 Database Schema Updates
+
+All new models have been added to `prisma/schema.prisma`:
+
+1. **Notification** - In-app notifications
+2. **NotificationPreference** - User notification preferences
+3. **NotificationTemplate** - Notification templates
+4. **File** - File storage records
+5. **FileShare** - File sharing links
+6. **SavedSearch** - Saved search queries
+7. **ExportJob** - Export job tracking
+8. **ImportJob** - Import job tracking
+
+## 🔧 Setup Instructions
+
+### 1. Install Dependencies
+```bash
+npm install json2csv socket.io
+npm install --save-dev @types/json2csv
+```
+
+### 2. Run Database Migration
+```bash
+npx prisma migrate dev --name add_notifications_files_search_export_realtime
+```
+
+### 3. Environment Variables
+Add to `.env`:
+```env
+# File Storage
+UPLOAD_DIR=./uploads
+MAX_FILE_SIZE=104857600
+DEFAULT_STORAGE_QUOTA=1073741824
+DEFAULT_FILE_QUOTA=1000
+
+# Email (for notifications)
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=your-email@example.com
+SMTP_PASS=your-password
+SMTP_FROM=noreply@example.com
+
+# Socket.IO
+CORS_ORIGIN=http://localhost:3000
+```
+
+### 4. Create Upload Directory
+```bash
+mkdir -p uploads
+```
+
+## 🎯 Next Steps
+
+1. **Run migrations**: `npx prisma migrate dev`
+2. **Install dependencies**: `npm install`
+3. **Start server**: `npm run dev`
+4. **Test endpoints**: Use Swagger UI at `/api-docs`
+
+## 📝 Notes
+
+- All services follow clean architecture principles
+- Proper error handling and validation
+- Multi-tenant aware
+- Permission-based access control
+- Comprehensive logging
+- Type-safe TypeScript implementation
+
+## 🔒 Security Considerations
+
+- File uploads validated by MIME type and size
+- Share links protected with passwords and expiration
+- Storage quotas prevent abuse
+- All endpoints require authentication
+- Permission checks on sensitive operations
+- Input validation on all endpoints
+
+## 🚀 Future Enhancements
+
+- [ ] Image resizing/optimization (sharp library)
+- [ ] S3/cloud storage integration
+- [ ] Push notification implementation (web-push)
+- [ ] SMS notification implementation (Twilio)
+- [ ] Elasticsearch integration for advanced search
+- [ ] Background job processing (Bull/BullMQ)
+- [ ] File virus scanning
+- [ ] Advanced analytics dashboard

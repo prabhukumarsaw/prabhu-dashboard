@@ -1,10 +1,10 @@
-import { Router } from 'express';
+import { Router, type Router as ExpressRouter } from 'express';
 import { authRequired, requirePermission } from '../middleware';
 import * as aclController from '../controllers/acl.controller';
 import { body, param, query } from 'express-validator';
 import { validate } from '../lib';
 
-const router = Router();
+const router: ExpressRouter = Router();
 
 router.use(authRequired);
 

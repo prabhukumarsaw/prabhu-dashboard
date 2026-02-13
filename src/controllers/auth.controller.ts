@@ -11,38 +11,41 @@ export async function register(req: Request, res: Response): Promise<void> {
     res.status(400).json({ success: false, message: 'Tenant is required' });
     return;
   }
-  const user = await authService.register({
-    tenantId: tenantIdResolved,
-    email,
-    username,
-    password,
-    firstName,
-    lastName,
-  });
-  const session = await createSession(user.id, user.tenantId, req.ip, req.get('User-Agent'));
-  const accessToken = signAccessToken({
-    sub: user.id,
-    email: user.email,
-    tenantId: user.tenantId,
-    sessionId: session.id,
-  });
-  const refreshToken = signRefreshToken({
-    sub: user.id,
-    email: user.email,
-    tenantId: user.tenantId,
-    sessionId: session.id,
-  });
-  await authService.logout(undefined, undefined);
-  res.status(201).json({
-    success: true,
-    data: {
-      user: authService.sanitizeUser(user),
-      accessToken,
-      refreshToken,
-      expiresIn: config.jwt.accessExpiry,
+  try {
+    const user = await authService.register({
+      tenantId: tenantIdResolved,
+      email,
+      username,
+      password,
+      firstName,
+      lastName,
+    });
+    const session = await createSession(user.id, user.tenantId, req.ip, req.get('User-Agent'));
+    const accessToken = signAccessToken({
+      sub: user.id,
+      email: user.email,
+      tenantId: user.tenantId,
       sessionId: session.id,
-    },
-  });
+    });
+    const refreshToken = signRefreshToken({
+      sub: user.id,
+      email: user.email,
+      tenantId: user.tenantId,
+      sessionId: session.id,
+    });
+    res.status(201).json({
+      success: true,
+      data: {
+        user: authService.sanitizeUser(user),
+        accessToken,
+        refreshToken,
+        expiresIn: config.jwt.accessExpiry,
+        sessionId: session.id,
+      },
+    });
+  } catch (error: any) {
+    res.status(400).json({ success: false, message: error.message || 'Registration failed' });
+  }
 }
 
 export async function login(req: Request, res: Response): Promise<void> {
@@ -52,15 +55,19 @@ export async function login(req: Request, res: Response): Promise<void> {
     res.status(400).json({ success: false, message: 'Tenant is required' });
     return;
   }
-  const result = await authService.login({
-    tenantId: tenantIdResolved,
-    email,
-    username,
-    password,
-    ip: req.ip,
-    userAgent: req.get('User-Agent'),
-  });
-  res.json({ success: true, data: result });
+  try {
+    const result = await authService.login({
+      tenantId: tenantIdResolved,
+      email,
+      username,
+      password,
+      ip: req.ip,
+      userAgent: req.get('User-Agent'),
+    });
+    res.json({ success: true, data: result });
+  } catch (error: any) {
+    res.status(400).json({ success: false, message: error.message || 'Login failed' });
+  }
 }
 
 export async function refresh(req: Request, res: Response): Promise<void> {

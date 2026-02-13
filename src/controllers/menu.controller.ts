@@ -12,7 +12,8 @@ export async function myMenus(req: Request, res: Response): Promise<void> {
     res.status(401).json({ success: false, message: 'Not authenticated' });
     return;
   }
-  const menus = await menuService.listMenusForUser(req.user.id, req.user.tenantId);
+  const user = req.user as any;
+  const menus = await menuService.listMenusForUser(user.id, user.tenantId);
   res.json({ success: true, data: { menus } });
 }
 

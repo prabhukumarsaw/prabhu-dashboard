@@ -1,10 +1,10 @@
-import { Router } from 'express';
+import { Router, type Router as ExpressRouter } from 'express';
 import { authRequired, requirePermission } from '../middleware';
 import * as policyController from '../controllers/policy.controller';
 import { body, param } from 'express-validator';
 import { validate } from '../lib';
 
-const router = Router();
+const router: ExpressRouter = Router();
 
 router.use(authRequired);
 

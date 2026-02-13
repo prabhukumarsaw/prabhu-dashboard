@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Express } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -17,8 +17,13 @@ import menuRoutes from './routes/menu.routes';
 import permissionRoutes from './routes/permission.routes';
 import policyRoutes from './routes/policy.routes';
 import aclRoutes from './routes/acl.routes';
+import notificationRoutes from './routes/notification.routes';
+import fileRoutes from './routes/file.routes';
+import searchRoutes from './routes/search.routes';
+import exportImportRoutes from './routes/export-import.routes';
+import realtimeRoutes from './routes/realtime.routes';
 
-const app = express();
+const app: Express = express();
 
 app.use(helmet());
 app.use(cors({ origin: true, credentials: true }));
@@ -53,6 +58,11 @@ app.use(`${config.apiPrefix}/menus`, menuRoutes);
 app.use(`${config.apiPrefix}/permissions`, permissionRoutes);
 app.use(`${config.apiPrefix}/policies`, policyRoutes);
 app.use(`${config.apiPrefix}/acl`, aclRoutes);
+app.use(`${config.apiPrefix}/notifications`, notificationRoutes);
+app.use(`${config.apiPrefix}/files`, fileRoutes);
+app.use(`${config.apiPrefix}/search`, searchRoutes);
+app.use(`${config.apiPrefix}/export-import`, exportImportRoutes);
+app.use(`${config.apiPrefix}/realtime`, realtimeRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

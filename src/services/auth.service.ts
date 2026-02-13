@@ -13,6 +13,23 @@ const REFRESH_TOKEN_EXPIRY_DAYS = 7;
 const OTP_EXPIRY_MINUTES = 10;
 const SESSION_EXPIRY_DAYS = 30;
 
+/**
+ * Validate tenant exists and is active
+ */
+async function validateTenant(tenantId: string): Promise<void> {
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+  });
+
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
+
+  if (!tenant.isActive) {
+    throw new Error('Tenant is not active');
+  }
+}
+
 export type LoginInput = {
   tenantId: string;
   email?: string;
@@ -32,6 +49,10 @@ export type RegisterInput = {
 };
 
 export async function register(data: RegisterInput) {
+  // Validate tenant exists and is active
+  await validateTenant(data.tenantId);
+
+  // Check if user already exists
   const existing = await prisma.user.findFirst({
     where: {
       tenantId: data.tenantId,
@@ -58,6 +79,9 @@ export async function register(data: RegisterInput) {
 }
 
 export async function login(input: LoginInput) {
+  // Validate tenant exists and is active
+  await validateTenant(input.tenantId);
+
   const where: { tenantId: string; passwordHash?: { not: null }; OR: object[] } = {
     tenantId: input.tenantId,
     passwordHash: { not: null },
@@ -283,6 +307,9 @@ export async function verifyOTPCode(userId: string, code: string, type: string):
 }
 
 export async function requestLoginOTP(tenantId: string, email: string): Promise<{ userId: string } | null> {
+  // Validate tenant exists and is active
+  await validateTenant(tenantId);
+
   const user = await prisma.user.findFirst({
     where: { tenantId, email, isActive: true },
   });
@@ -298,6 +325,9 @@ export async function loginWithOTP(
   ip?: string,
   userAgent?: string
 ) {
+  // Validate tenant exists and is active
+  await validateTenant(tenantId);
+
   const user = await prisma.user.findFirst({
     where: { tenantId, email, isActive: true },
     include: { tenant: true, userRoles: { include: { role: true } } },
@@ -335,6 +365,9 @@ export async function loginWithOTP(
 // ---------- Password reset ----------
 
 export async function requestPasswordReset(tenantId: string, email: string): Promise<void> {
+  // Validate tenant exists and is active
+  await validateTenant(tenantId);
+
   const user = await prisma.user.findFirst({
     where: { tenantId, email, isActive: true },
   });
@@ -353,6 +386,9 @@ export async function resetPasswordWithOTP(
   code: string,
   newPassword: string
 ): Promise<void> {
+  // Validate tenant exists and is active
+  await validateTenant(tenantId);
+
   const user = await prisma.user.findFirst({
     where: { tenantId, email, isActive: true },
   });
