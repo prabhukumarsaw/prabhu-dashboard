@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { canAccess, getUserAttributes } from '../services/iam.service';
+import { canAccess, getUserAttributes } from '../services/core/iam.service';
 import { prisma } from '../lib/prisma';
 
 type IAMOptions = {

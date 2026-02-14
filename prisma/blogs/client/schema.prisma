@@ -1,0 +1,23 @@
+generator blogClient {
+  provider = "prisma-client-js"
+  output   = "./client"
+}
+
+datasource blogDb {
+  provider = "postgresql"
+  url      = env("BLOGS_DATABASE_URL")
+}
+
+model Blog {
+  id          String   @id @default(uuid())
+  tenantId    String
+  authorId    String
+  title       String
+  content     String
+  isPublished Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([authorId])
+}

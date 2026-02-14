@@ -2,7 +2,7 @@ import { createServer } from 'http';
 import app from './app';
 import { config } from './config';
 import { logger } from './lib/logger';
-import { initializeSocketIO } from './services/realtime.service';
+import { initializeSocketIO } from './services/core/realtime.service';
 
 const httpServer = createServer(app);
 

@@ -24,9 +24,10 @@ const options: swaggerJsdoc.Options = {
       { name: 'Tenants', description: 'Tenant management' },
       { name: 'Menus', description: 'Menu management' },
       { name: 'Permissions', description: 'Permission listing' },
+      { name: 'Blogs', description: 'Blog management module' },
     ],
   },
-  apis: ['./src/routes/*.ts', './src/controllers/*.ts'],
+  apis: ['./src/routes/**/*.ts', './src/controllers/**/*.ts'],
 };
 
 export const swaggerSpec = swaggerJsdoc(options);

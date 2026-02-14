@@ -12,24 +12,24 @@ datasource db {
 
 // ============== MULTI-TENANT ==============
 model Tenant {
-  id          String   @id @default(uuid())
-  name        String
-  slug        String   @unique
-  domain      String?  @unique
-  logo        String?
-  settings    Json?    // tenant-specific config
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  domain    String?  @unique
+  logo      String?
+  settings  Json? // tenant-specific config
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  users       User[]
-  roles       Role[]
-  modules     TenantModule[]
-  menus       Menu[]
-  policies    Policy[]
-  aclEntries  ACLEntry[]
+  users         User[]
+  roles         Role[]
+  modules       TenantModule[]
+  menus         Menu[]
+  policies      Policy[]
+  aclEntries    ACLEntry[]
   notifications Notification[]
-  files       File[]
+  files         File[]
   savedSearches SavedSearch[]
 }
 
@@ -37,7 +37,7 @@ model Tenant {
 model Module {
   id          String   @id @default(uuid())
   name        String
-  code        String   @unique  // e.g. "billing", "reports"
+  code        String   @unique // e.g. "billing", "reports"
   description String?
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
@@ -69,7 +69,7 @@ model User {
   tenantId      String
   email         String
   username      String?
-  passwordHash  String?   // null for OAuth-only users
+  passwordHash  String? // null for OAuth-only users
   firstName     String?
   lastName      String?
   avatar        String?
@@ -79,22 +79,22 @@ model User {
   isActive      Boolean   @default(true)
   emailVerified Boolean   @default(false)
   mfaEnabled    Boolean   @default(false)
-  mfaSecret     String?   // TOTP secret
+  mfaSecret     String? // TOTP secret
   lastLoginAt   DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  userRoles     UserRole[]
-  sessions      Session[]
-  otpCodes      OTPCode[]
-  userAttributes UserAttribute[]
-  oAuthAccounts OAuthAccount[]
-  refreshTokens RefreshToken[]
-  notifications Notification[]
+  tenant                  Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userRoles               UserRole[]
+  sessions                Session[]
+  otpCodes                OTPCode[]
+  userAttributes          UserAttribute[]
+  oAuthAccounts           OAuthAccount[]
+  refreshTokens           RefreshToken[]
+  notifications           Notification[]
   notificationPreferences NotificationPreference[]
-  files         File[]
-  savedSearches SavedSearch[]
+  files                   File[]
+  savedSearches           SavedSearch[]
 
   @@unique([tenantId, email])
   @@unique([tenantId, username])
@@ -103,15 +103,15 @@ model User {
 }
 
 model OAuthAccount {
-  id          String   @id @default(uuid())
-  userId      String
-  provider    String   // google, facebook
-  providerId  String
-  accessToken String?
+  id           String    @id @default(uuid())
+  userId       String
+  provider     String // google, facebook
+  providerId   String
+  accessToken  String?
   refreshToken String?
-  expiresAt   DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  expiresAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -124,41 +124,41 @@ model Role {
   id          String   @id @default(uuid())
   tenantId    String
   name        String
-  code        String   // e.g. "admin", "editor"
+  code        String // e.g. "admin", "editor"
   description String?
   isSystem    Boolean  @default(false) // system roles cannot be deleted
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  userRoles    UserRole[]
+  tenant          Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userRoles       UserRole[]
   rolePermissions RolePermission[]
-  roleMenus    RoleMenu[]
+  roleMenus       RoleMenu[]
 }
 
 model Permission {
   id          String   @id @default(uuid())
   moduleId    String?
   name        String
-  code        String   @unique  // e.g. "user:create", "report:read"
-  resource    String?  // resource type for ABAC
-  action      String?  // action type
+  code        String   @unique // e.g. "user:create", "report:read"
+  resource    String? // resource type for ABAC
+  action      String? // action type
   description String?
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
 
-  module       Module?          @relation(fields: [moduleId], references: [id], onDelete: SetNull)
+  module          Module?          @relation(fields: [moduleId], references: [id], onDelete: SetNull)
   rolePermissions RolePermission[]
 }
 
 model UserRole {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   userId    String
   roleId    String
-  scope     Json?    // optional scope (e.g. department id) for scoped RBAC
+  scope     Json? // optional scope (e.g. department id) for scoped RBAC
   expiresAt DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
@@ -172,7 +172,7 @@ model RolePermission {
   id           String   @id @default(uuid())
   roleId       String
   permissionId String
-  conditions   Json?    // optional ABAC-like conditions on this assignment
+  conditions   Json? // optional ABAC-like conditions on this assignment
   createdAt    DateTime @default(now())
 
   role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
@@ -185,26 +185,26 @@ model RolePermission {
 
 // ============== ABAC: User Attributes ==============
 model AttributeDefinition {
-  id        String   @id @default(uuid())
-  name      String   @unique  // e.g. "department", "clearance_level"
-  type      String   // string, number, boolean, array
+  id          String   @id @default(uuid())
+  name        String   @unique // e.g. "department", "clearance_level"
+  type        String // string, number, boolean, array
   description String?
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
 
   userAttributes UserAttribute[]
   policyRules    PolicyRule[]
 }
 
 model UserAttribute {
-  id         String   @id @default(uuid())
-  userId     String
+  id          String   @id @default(uuid())
+  userId      String
   attributeId String
-  value      Json     // flexible value
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  value       Json // flexible value
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   attribute AttributeDefinition @relation(fields: [attributeId], references: [id], onDelete: Cascade)
 
   @@unique([userId, attributeId])
@@ -219,25 +219,25 @@ model Policy {
   name        String
   code        String
   description String?
-  effect      String   // ALLOW, DENY
-  priority    Int      @default(0)  // higher = evaluated first
+  effect      String // ALLOW, DENY
+  priority    Int      @default(0) // higher = evaluated first
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  tenant Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   rules  PolicyRule[]
 }
 
 model PolicyRule {
-  id         String   @id @default(uuid())
-  policyId   String
+  id          String   @id @default(uuid())
+  policyId    String
   attributeId String?
-  operator   String   // eq, ne, in, contains, gte, lte, etc.
-  value      Json
-  createdAt  DateTime @default(now())
+  operator    String // eq, ne, in, contains, gte, lte, etc.
+  value       Json
+  createdAt   DateTime @default(now())
 
-  policy    Policy             @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  policy    Policy               @relation(fields: [policyId], references: [id], onDelete: Cascade)
   attribute AttributeDefinition? @relation(fields: [attributeId], references: [id], onDelete: SetNull)
 
   @@index([policyId])
@@ -245,15 +245,15 @@ model PolicyRule {
 
 // ============== ACL: Access Control List ==============
 model ACLEntry {
-  id         String   @id @default(uuid())
-  tenantId   String
-  subjectType String  // user, role, group
-  subjectId  String
+  id           String   @id @default(uuid())
+  tenantId     String
+  subjectType  String // user, role, group
+  subjectId    String
   resourceType String // e.g. "document", "project"
-  resourceId String?
-  permission String  // e.g. "read", "write", "admin"
-  conditions Json?   // optional conditions
-  createdAt  DateTime @default(now())
+  resourceId   String?
+  permission   String // e.g. "read", "write", "admin"
+  conditions   Json? // optional conditions
+  createdAt    DateTime @default(now())
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
@@ -264,30 +264,30 @@ model ACLEntry {
 
 // ============== MENUS (per-tenant, per-role) ==============
 model Menu {
-  id        String   @id @default(uuid())
-  tenantId  String
-  moduleId  String?
-  parentId  String?
-  title     String
-  path      String?
-  icon      String?
-  order     Int      @default(0)
-  permissionCode String?  // required permission to see this menu
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String   @id @default(uuid())
+  tenantId       String
+  moduleId       String?
+  parentId       String?
+  title          String
+  path           String?
+  icon           String?
+  order          Int      @default(0)
+  permissionCode String? // required permission to see this menu
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  tenant   Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  module   Module? @relation(fields: [moduleId], references: [id], onDelete: SetNull)
-  parent   Menu?   @relation("MenuHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
-  children Menu[]  @relation("MenuHierarchy")
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  module    Module?    @relation(fields: [moduleId], references: [id], onDelete: SetNull)
+  parent    Menu?      @relation("MenuHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children  Menu[]     @relation("MenuHierarchy")
   roleMenus RoleMenu[]
 }
 
 model RoleMenu {
-  id      String @id @default(uuid())
-  roleId  String
-  menuId  String
+  id        String   @id @default(uuid())
+  roleId    String
+  menuId    String
   createdAt DateTime @default(now())
 
   role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
@@ -304,16 +304,16 @@ model RoleMenu {
 
 // ============== SESSIONS ==============
 model Session {
-  id           String   @id @default(uuid())
-  userId       String
-  tenantId     String
-  tokenHash    String?  // hashed refresh/session token
-  ip           String?
-  userAgent    String?
-  deviceInfo   Json?
-  expiresAt    DateTime
-  revokedAt   DateTime?
-  createdAt    DateTime @default(now())
+  id         String    @id @default(uuid())
+  userId     String
+  tenantId   String
+  tokenHash  String? // hashed refresh/session token
+  ip         String?
+  userAgent  String?
+  deviceInfo Json?
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -324,13 +324,13 @@ model Session {
 
 // ============== OTP (2FA / magic link) ==============
 model OTPCode {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   userId    String
-  code      String   // hashed
-  type      String   // login_otp, mfa_verify, password_reset, email_verify
+  code      String // hashed
+  type      String // login_otp, mfa_verify, password_reset, email_verify
   expiresAt DateTime
   usedAt    DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -340,13 +340,13 @@ model OTPCode {
 
 // ============== REFRESH TOKENS (JWT) ==============
 model RefreshToken {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   userId    String
   tokenHash String
   deviceId  String?
   expiresAt DateTime
   revokedAt DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -356,17 +356,17 @@ model RefreshToken {
 
 // ============== NOTIFICATIONS ==============
 model Notification {
-  id          String   @id @default(uuid())
-  tenantId    String
-  userId      String
-  type        String   // "info", "warning", "error", "success"
-  title       String
-  message     String
-  actionUrl   String?
-  isRead      Boolean  @default(false)
-  readAt      DateTime?
-  metadata    Json?
-  createdAt   DateTime @default(now())
+  id        String    @id @default(uuid())
+  tenantId  String
+  userId    String
+  type      String // "info", "warning", "error", "success"
+  title     String
+  message   String
+  actionUrl String?
+  isRead    Boolean   @default(false)
+  readAt    DateTime?
+  metadata  Json?
+  createdAt DateTime  @default(now())
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -378,13 +378,13 @@ model Notification {
 }
 
 model NotificationPreference {
-  id          String   @id @default(uuid())
-  userId      String
-  channel     String   // "email", "push", "in_app", "sms"
-  category    String   // "security", "billing", "system", "general"
-  enabled     Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(uuid())
+  userId    String
+  channel   String // "email", "push", "in_app", "sms"
+  category  String // "security", "billing", "system", "general"
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -393,17 +393,17 @@ model NotificationPreference {
 }
 
 model NotificationTemplate {
-  id          String   @id @default(uuid())
-  tenantId    String?
-  code        String   @unique // "user.welcome", "password.reset"
-  name        String
-  subject     String?
-  body        String   // HTML or plain text
-  channel     String   // "email", "push", "in_app", "sms"
-  variables   Json?    // available variables
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(uuid())
+  tenantId  String?
+  code      String   @unique // "user.welcome", "password.reset"
+  name      String
+  subject   String?
+  body      String // HTML or plain text
+  channel   String // "email", "push", "in_app", "sms"
+  variables Json? // available variables
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([code])
   @@index([tenantId])
@@ -411,23 +411,23 @@ model NotificationTemplate {
 
 // ============== FILE STORAGE ==============
 model File {
-  id          String   @id @default(uuid())
-  tenantId    String
-  userId      String?
-  name        String
+  id           String   @id @default(uuid())
+  tenantId     String
+  userId       String?
+  name         String
   originalName String
-  mimeType    String
-  size        Int      // bytes
-  path        String   // local path or S3 path
-  url         String   // public URL
-  storageType String   @default("local") // "local", "s3", "gcs"
-  isPublic    Boolean  @default(false)
-  metadata    Json?    // additional metadata
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  mimeType     String
+  size         Int // bytes
+  path         String // local path or S3 path
+  url          String // public URL
+  storageType  String   @default("local") // "local", "s3", "gcs"
+  isPublic     Boolean  @default(false)
+  metadata     Json? // additional metadata
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+  tenant Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
   shares FileShare[]
 
   @@index([tenantId])
@@ -437,16 +437,16 @@ model File {
 }
 
 model FileShare {
-  id          String   @id @default(uuid())
-  fileId      String
-  shareToken  String   @unique
-  passwordHash String? // optional password protection
-  expiresAt   DateTime?
-  maxDownloads Int?
-  downloadCount Int    @default(0)
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String    @id @default(uuid())
+  fileId        String
+  shareToken    String    @unique
+  passwordHash  String? // optional password protection
+  expiresAt     DateTime?
+  maxDownloads  Int?
+  downloadCount Int       @default(0)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   file File @relation(fields: [fileId], references: [id], onDelete: Cascade)
 
@@ -457,15 +457,15 @@ model FileShare {
 
 // ============== ADVANCED SEARCH ==============
 model SavedSearch {
-  id          String   @id @default(uuid())
-  tenantId    String
-  userId      String
-  name        String
-  resourceType String  // "user", "role", "file", etc.
-  query       Json     // search filters and criteria
-  isPublic    Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id           String   @id @default(uuid())
+  tenantId     String
+  userId       String
+  name         String
+  resourceType String // "user", "role", "file", etc.
+  query        Json // search filters and criteria
+  isPublic     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -477,17 +477,17 @@ model SavedSearch {
 
 // ============== EXPORT/IMPORT ==============
 model ExportJob {
-  id          String   @id @default(uuid())
-  tenantId    String
-  userId      String
-  resourceType String  // "user", "role", "permission"
-  format      String   // "csv", "json", "xlsx"
-  filters     Json?    // export filters
-  status      String   // "pending", "processing", "completed", "failed"
-  fileId      String?  // reference to File model
-  error       String?
-  createdAt   DateTime @default(now())
-  completedAt DateTime?
+  id           String    @id @default(uuid())
+  tenantId     String
+  userId       String
+  resourceType String // "user", "role", "permission"
+  format       String // "csv", "json", "xlsx"
+  filters      Json? // export filters
+  status       String // "pending", "processing", "completed", "failed"
+  fileId       String? // reference to File model
+  error        String?
+  createdAt    DateTime  @default(now())
+  completedAt  DateTime?
 
   @@index([tenantId])
   @@index([userId])
@@ -496,20 +496,20 @@ model ExportJob {
 }
 
 model ImportJob {
-  id          String   @id @default(uuid())
-  tenantId    String
-  userId      String
-  resourceType String  // "user", "role"
-  format      String   // "csv", "json", "xlsx"
-  fileId      String   // reference to File model
-  status      String   // "pending", "processing", "completed", "failed"
-  totalRows   Int?
-  processedRows Int    @default(0)
-  successRows Int     @default(0)
-  errorRows   Int     @default(0)
-  errors      Json?    // array of errors
-  createdAt   DateTime @default(now())
-  completedAt DateTime?
+  id            String    @id @default(uuid())
+  tenantId      String
+  userId        String
+  resourceType  String // "user", "role"
+  format        String // "csv", "json", "xlsx"
+  fileId        String // reference to File model
+  status        String // "pending", "processing", "completed", "failed"
+  totalRows     Int?
+  processedRows Int       @default(0)
+  successRows   Int       @default(0)
+  errorRows     Int       @default(0)
+  errors        Json? // array of errors
+  createdAt     DateTime  @default(now())
+  completedAt   DateTime?
 
   @@index([tenantId])
   @@index([userId])
