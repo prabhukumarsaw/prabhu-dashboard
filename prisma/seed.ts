@@ -50,6 +50,9 @@ async function main() {
     { code: 'acl:read', name: 'Read ACL', resource: 'acl', action: 'read' },
     { code: 'acl:create', name: 'Create ACL entry', resource: 'acl', action: 'create' },
     { code: 'acl:delete', name: 'Delete ACL entry', resource: 'acl', action: 'delete' },
+    { code: 'file:read', name: 'Read files', resource: 'file', action: 'read' },
+    { code: 'file:create', name: 'Create files', resource: 'file', action: 'create' },
+    { code: 'file:delete', name: 'Delete files', resource: 'file', action: 'delete' },
   ];
 
   for (const p of permissions) {
@@ -73,6 +76,33 @@ async function main() {
         isSystem: true,
         isActive: true,
       },
+    });
+  }
+
+  let userRole = await prisma.role.findFirst({
+    where: { tenantId: defaultTenant.id, code: 'user' },
+  });
+  if (!userRole) {
+    userRole = await prisma.role.create({
+      data: {
+        tenantId: defaultTenant.id,
+        name: 'User',
+        code: 'user',
+        description: 'Default user access',
+        isSystem: true,
+        isActive: true,
+      },
+    });
+  }
+
+  const filePerms = await prisma.permission.findMany({
+    where: { resource: 'file' },
+  });
+  for (const perm of filePerms) {
+    await prisma.rolePermission.upsert({
+      where: { roleId_permissionId: { roleId: userRole.id, permissionId: perm.id } },
+      create: { roleId: userRole.id, permissionId: perm.id },
+      update: {},
     });
   }
 

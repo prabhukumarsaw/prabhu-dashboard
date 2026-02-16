@@ -74,13 +74,22 @@ model User {
   lastName      String?
   avatar        String?
   phone         String?
+  address       String?
+  state         String?
+  country       String?
+  zipCode       String?
+  organization  String?
+  currency      String?   @default("USD")
+  background    String?
   locale        String?   @default("en")
   timezone      String?   @default("UTC")
   isActive      Boolean   @default(true)
   emailVerified Boolean   @default(false)
   mfaEnabled    Boolean   @default(false)
   mfaSecret     String? // TOTP secret
-  lastLoginAt   DateTime?
+  loginAlerts           Boolean   @default(false)
+  accountRecoveryOption String? // email, sms, codes
+  lastLoginAt           DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 

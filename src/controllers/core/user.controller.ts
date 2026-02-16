@@ -27,17 +27,21 @@ export async function getById(req: Request, res: Response): Promise<void> {
 
 export async function create(req: Request, res: Response): Promise<void> {
   const { email, username, password, firstName, lastName, phone, roleIds } = req.body;
-  const user = await userService.createUser({
-    tenantId: req.tenantId!,
-    email,
-    username,
-    password,
-    firstName,
-    lastName,
-    phone,
-    roleIds,
-  });
-  res.status(201).json({ success: true, data: { user: authService.sanitizeUser(user) } });
+  try {
+    const user = await userService.createUser({
+      tenantId: req.tenantId!,
+      email,
+      username,
+      password,
+      firstName,
+      lastName,
+      phone,
+      roleIds,
+    });
+    res.status(201).json({ success: true, data: { user: authService.sanitizeUser(user) } });
+  } catch (error: any) {
+    res.status(400).json({ success: false, message: error.message || 'User creation failed' });
+  }
 }
 
 export async function update(req: Request, res: Response): Promise<void> {

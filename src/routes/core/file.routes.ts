@@ -10,7 +10,7 @@ router.use(authRequired);
 
 // Upload file
 router.post(
-  '/',
+  '/upload',
   requirePermission({ permissionCode: 'file:create' }),
   fileController.uploadMiddleware,
   fileController.uploadFile

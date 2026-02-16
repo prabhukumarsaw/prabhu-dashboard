@@ -1,44 +1,39 @@
 import { Request, Response } from 'express';
 import * as authService from '../../services/core/auth.service';
+import * as userService from '../../services/core/user.service';
 import { createSession } from '../../services/core/auth.service';
 import { signAccessToken, signRefreshToken } from '../../lib/jwt';
 import { config } from '../../config';
 
 export async function register(req: Request, res: Response): Promise<void> {
   const { tenantId, email, username, password, firstName, lastName } = req.body;
-  const tenantIdResolved = tenantId || req.tenantId;
-  if (!tenantIdResolved) {
-    res.status(400).json({ success: false, message: 'Tenant is required' });
-    return;
-  }
+  const tid = tenantId || req.tenantId;
+
   try {
     const user = await authService.register({
-      tenantId: tenantIdResolved,
+      tenantId: tid!,
       email,
       username,
       password,
       firstName,
       lastName,
     });
+
     const session = await createSession(user.id, user.tenantId, req.ip, req.get('User-Agent'));
-    const accessToken = signAccessToken({
+
+    const payload = {
       sub: user.id,
       email: user.email,
       tenantId: user.tenantId,
       sessionId: session.id,
-    });
-    const refreshToken = signRefreshToken({
-      sub: user.id,
-      email: user.email,
-      tenantId: user.tenantId,
-      sessionId: session.id,
-    });
+    };
+
     res.status(201).json({
       success: true,
       data: {
         user: authService.sanitizeUser(user),
-        accessToken,
-        refreshToken,
+        accessToken: signAccessToken(payload),
+        refreshToken: signRefreshToken(payload),
         expiresIn: config.jwt.accessExpiry,
         sessionId: session.id,
       },
@@ -76,8 +71,13 @@ export async function refresh(req: Request, res: Response): Promise<void> {
     res.status(400).json({ success: false, message: 'Refresh token required' });
     return;
   }
-  const result = await authService.refreshTokens(refreshToken);
-  res.json({ success: true, data: result });
+  try {
+    const result = await authService.refreshTokens(refreshToken);
+    res.json({ success: true, data: result });
+  } catch (error: any) {
+    const status = error.message.includes('expired') || error.message.includes('Invalid') ? 401 : 400;
+    res.status(status).json({ success: false, message: error.message || 'Refresh failed' });
+  }
 }
 
 export async function logout(req: Request, res: Response): Promise<void> {
@@ -96,6 +96,25 @@ export async function me(req: Request, res: Response): Promise<void> {
     success: true,
     data: { user: authService.sanitizeUser(user) },
   });
+}
+
+export async function updateMe(req: Request, res: Response): Promise<void> {
+  if (!req.user) {
+    res.status(401).json({ success: false, message: 'Not authenticated' });
+    return;
+  }
+  try {
+    const userId = (req.user as any).id;
+    const tenantId = req.tenantId!;
+    const user = await userService.updateUser(userId, tenantId, req.body);
+    if (!user) {
+      res.status(404).json({ success: false, message: 'User not found' });
+      return;
+    }
+    res.json({ success: true, data: { user: authService.sanitizeUser(user) } });
+  } catch (error: any) {
+    res.status(400).json({ success: false, message: error.message || 'Profile update failed' });
+  }
 }
 
 // ---------- OTP / 2FA ----------
@@ -144,14 +163,18 @@ export async function verifyLoginOTP(req: Request, res: Response): Promise<void>
     res.status(400).json({ success: false, message: 'Email, code and tenant required' });
     return;
   }
-  const result = await authService.loginWithOTP(
-    tid,
-    email,
-    code,
-    req.ip,
-    req.get('User-Agent')
-  );
-  res.json({ success: true, data: result });
+  try {
+    const result = await authService.loginWithOTP(
+      tid,
+      email,
+      code,
+      req.ip,
+      req.get('User-Agent')
+    );
+    res.json({ success: true, data: result });
+  } catch (error: any) {
+    res.status(401).json({ success: false, message: error.message || 'OTP verification failed' });
+  }
 }
 
 // ---------- Password reset ----------
@@ -198,5 +221,18 @@ export async function changePassword(req: Request, res: Response): Promise<void>
     res.json({ success: true, message: 'Password changed successfully' });
   } catch (e: any) {
     res.status(400).json({ success: false, message: e.message || 'Unable to change password' });
+  }
+}
+
+export async function listSessions(req: Request, res: Response): Promise<void> {
+  if (!req.user) {
+    res.status(401).json({ success: false, message: 'Not authenticated' });
+    return;
+  }
+  try {
+    const sessions = await authService.listSessions((req.user as any).id);
+    res.json({ success: true, data: sessions });
+  } catch (error: any) {
+    res.status(400).json({ success: false, message: error.message || 'Failed to list sessions' });
   }
 }

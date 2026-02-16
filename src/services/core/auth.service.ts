@@ -48,33 +48,19 @@ export type RegisterInput = {
   lastName?: string;
 };
 
+import * as userService from './user.service';
+
 export async function register(data: RegisterInput) {
-  // Validate tenant exists and is active
-  await validateTenant(data.tenantId);
-
-  // Check if user already exists
-  const existing = await prisma.user.findFirst({
-    where: {
-      tenantId: data.tenantId,
-      OR: [{ email: data.email }, ...(data.username ? [{ username: data.username }] : [])],
-    },
+  // Delegate user creation to userService
+  const user = await userService.createUser({
+    tenantId: data.tenantId,
+    email: data.email,
+    username: data.username,
+    password: data.password,
+    firstName: data.firstName,
+    lastName: data.lastName,
   });
-  if (existing) {
-    throw new Error('User with this email or username already exists');
-  }
 
-  const passwordHash = await hashPassword(data.password);
-  const user = await prisma.user.create({
-    data: {
-      tenantId: data.tenantId,
-      email: data.email,
-      username: data.username,
-      passwordHash,
-      firstName: data.firstName,
-      lastName: data.lastName,
-    },
-    include: { tenant: true, userRoles: { include: { role: true } } },
-  });
   return user;
 }
 
@@ -156,6 +142,14 @@ export async function createSession(
       userAgent,
       expiresAt,
     },
+  });
+}
+
+export async function listSessions(userId: string) {
+  return prisma.session.findMany({
+    where: { userId },
+    orderBy: { createdAt: 'desc' },
+    take: 10,
   });
 }
 

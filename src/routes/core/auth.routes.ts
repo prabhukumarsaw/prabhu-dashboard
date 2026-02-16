@@ -42,6 +42,28 @@ router.post(
 
 router.post('/logout', authController.logout);
 router.get('/me', authRequired, authController.me);
+router.get('/sessions', authRequired, authController.listSessions);
+router.patch(
+  '/me',
+  authRequired,
+  [
+    body('email').optional().isEmail(),
+    body('username').optional().trim(),
+    body('firstName').optional().trim(),
+    body('lastName').optional().trim(),
+    body('phone').optional().trim(),
+    body('address').optional().trim(),
+    body('state').optional().trim(),
+    body('country').optional().trim(),
+    body('zipCode').optional().trim(),
+    body('organization').optional().trim(),
+    body('locale').optional().isString(),
+    body('timezone').optional().isString(),
+    body('currency').optional().isString(),
+  ],
+  validate,
+  authController.updateMe
+);
 
 // OAuth - Google
 router.get(

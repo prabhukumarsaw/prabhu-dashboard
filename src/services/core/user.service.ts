@@ -19,6 +19,13 @@ export type UpdateUserInput = Partial<{
   firstName: string;
   lastName: string;
   phone: string;
+  address: string;
+  state: string;
+  country: string;
+  zipCode: string;
+  organization: string;
+  currency: string;
+  background: string;
   locale: string;
   timezone: string;
   isActive: boolean;
@@ -26,7 +33,38 @@ export type UpdateUserInput = Partial<{
 }>;
 
 export async function createUser(data: CreateUserInput) {
+  // Check if user already exists in this tenant
+  const existing = await prisma.user.findFirst({
+    where: {
+      tenantId: data.tenantId,
+      OR: [
+        { email: data.email },
+        ...(data.username ? [{ username: data.username }] : []),
+      ],
+    },
+  });
+
+  if (existing) {
+    throw new Error("User with this email or username already exists");
+  }
+
   const passwordHash = data.password ? await hashPassword(data.password) : null;
+
+  // Resolve role IDs - if none provided, look for a default "user" role for the tenant
+  let refinedRoleIds = data.roleIds || [];
+  if (refinedRoleIds.length === 0) {
+    const defaultRole = await prisma.role.findFirst({
+      where: {
+        tenantId: data.tenantId,
+        code: "user", // Standard default role code
+        isActive: true,
+      },
+    });
+    if (defaultRole) {
+      refinedRoleIds = [defaultRole.id];
+    }
+  }
+
   const user = await prisma.user.create({
     data: {
       tenantId: data.tenantId,
@@ -36,8 +74,8 @@ export async function createUser(data: CreateUserInput) {
       firstName: data.firstName,
       lastName: data.lastName,
       phone: data.phone,
-      userRoles: data.roleIds?.length
-        ? { create: data.roleIds.map((roleId) => ({ roleId })) }
+      userRoles: refinedRoleIds.length
+        ? { create: refinedRoleIds.map((roleId) => ({ roleId })) }
         : undefined,
     },
     include: { tenant: true, userRoles: { include: { role: true } } },
