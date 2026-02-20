@@ -4,8 +4,8 @@ import { Prisma } from '@prisma/client';
 export async function listTenants(page = 1, limit = 20, search?: string) {
   const skip = (page - 1) * limit;
   const where: Prisma.TenantWhereInput = search
-    ? { OR: [{ name: { contains: search, mode: 'insensitive' as Prisma.QueryMode } }, { slug: { contains: search, mode: 'insensitive' as Prisma.QueryMode } }], isActive: true }
-    : { isActive: true };
+    ? { OR: [{ name: { contains: search, mode: 'insensitive' as Prisma.QueryMode } }, { slug: { contains: search, mode: 'insensitive' as Prisma.QueryMode } }] }
+    : {};
   const [tenants, total] = await Promise.all([
     prisma.tenant.findMany({ where, skip, take: limit, orderBy: { name: 'asc' } }),
     prisma.tenant.count({ where }),

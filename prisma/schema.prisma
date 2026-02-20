@@ -65,33 +65,33 @@ model TenantModule {
 
 // ============== USER ==============
 model User {
-  id            String    @id @default(uuid())
-  tenantId      String
-  email         String
-  username      String?
-  passwordHash  String? // null for OAuth-only users
-  firstName     String?
-  lastName      String?
-  avatar        String?
-  phone         String?
-  address       String?
-  state         String?
-  country       String?
-  zipCode       String?
-  organization  String?
-  currency      String?   @default("USD")
-  background    String?
-  locale        String?   @default("en")
-  timezone      String?   @default("UTC")
-  isActive      Boolean   @default(true)
-  emailVerified Boolean   @default(false)
-  mfaEnabled    Boolean   @default(false)
-  mfaSecret     String? // TOTP secret
+  id                    String    @id @default(uuid())
+  tenantId              String
+  email                 String
+  username              String?
+  passwordHash          String? // null for OAuth-only users
+  firstName             String?
+  lastName              String?
+  avatar                String?
+  phone                 String?
+  address               String?
+  state                 String?
+  country               String?
+  zipCode               String?
+  organization          String?
+  currency              String?   @default("USD")
+  background            String?
+  locale                String?   @default("en")
+  timezone              String?   @default("UTC")
+  isActive              Boolean   @default(true)
+  emailVerified         Boolean   @default(false)
+  mfaEnabled            Boolean   @default(false)
+  mfaSecret             String? // TOTP secret
   loginAlerts           Boolean   @default(false)
   accountRecoveryOption String? // email, sms, codes
   lastLoginAt           DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
   tenant                  Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   userRoles               UserRole[]
