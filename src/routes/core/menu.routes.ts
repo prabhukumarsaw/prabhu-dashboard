@@ -18,6 +18,13 @@ router.post(
   validate,
   menuController.create
 );
+router.put(
+  '/:id',
+  requirePermission({ permissionCode: 'menu:update' }),
+  [param('id').isUUID(), body('title').optional().trim(), body('path').optional({ nullable: true }).trim(), body('icon').optional({ nullable: true }).trim(), body('parentId').optional({ nullable: true }).isUUID(), body('order').optional({ nullable: true }).isInt(), body('permissionCode').optional({ nullable: true }).trim(), body('isActive').optional().isBoolean()],
+  validate,
+  menuController.update
+);
 router.patch(
   '/:id',
   requirePermission({ permissionCode: 'menu:update' }),

@@ -126,7 +126,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "D:\\WORKSPACE\\FEATURE WORKSPACE\\PrabhuLabs\\backend-iam\\prisma\\blogs\\client",
+      "value": "I:\\WORKSPACE-DEV\\PrabhuLabs\\backend\\prisma\\blogs\\client",
       "fromEnvVar": null
     },
     "config": {
@@ -140,7 +140,7 @@ const config = {
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "D:\\WORKSPACE\\FEATURE WORKSPACE\\PrabhuLabs\\backend-iam\\prisma\\blogs\\schema.prisma",
+    "sourceFilePath": "I:\\WORKSPACE-DEV\\PrabhuLabs\\backend\\prisma\\blogs\\schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {

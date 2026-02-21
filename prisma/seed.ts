@@ -204,16 +204,111 @@ async function main() {
     update: { passwordHash },
   });
 
+  // 5. Seed Menus (from static navigation data)
+  const seedMenus = async (tenantId: string, adminRole: any) => {
+    const menus = [
+      { title: 'Dashboards', icon: 'LayoutDashboard', path: '/dashboards/analytics', order: 1 },
+      { title: 'Pages', icon: 'FileText', path: '/pages/landing', order: 2 },
+      { title: 'Apps', icon: 'LayoutGrid', path: '/apps/chat', order: 3 },
+      { title: 'UI System', icon: 'Palette', path: '/typography', order: 4 },
+      { title: 'Panel', icon: 'ShieldCheck', path: '/panel/account/profile', order: 5 },
+    ];
+
+    const subMenus: any[] = [
+      // Dashboards
+      { parentTitle: 'Dashboards', title: 'Analytics', path: '/dashboards/analytics', icon: 'ChartPie', order: 1 },
+      { parentTitle: 'Dashboards', title: 'CRM', path: '/dashboards/crm', icon: 'ChartBar', order: 2 },
+      { parentTitle: 'Dashboards', title: 'eCommerce', path: '/dashboards/ecommerce', icon: 'ShoppingCart', order: 3 },
+
+      // Pages
+      { parentTitle: 'Pages', title: 'Landing', path: '/pages/landing', icon: 'LayoutTemplate', order: 1 },
+      { parentTitle: 'Pages', title: 'Pricing', path: '/pages/pricing', icon: 'CircleDollarSign', order: 2 },
+      { parentTitle: 'Pages', title: 'Payment', path: '/pages/payment', icon: 'CreditCard', order: 3 },
+      { parentTitle: 'Pages', title: 'Settings', path: '/pages/account/settings', icon: 'UserCog', order: 5 },
+      { parentTitle: 'Pages', title: 'Profile', path: '/pages/account/profile', icon: 'User', order: 6 },
+      { parentTitle: 'Pages', title: 'Fallback', icon: 'Replace', order: 7 },
+      { parentTitle: 'Fallback', title: 'Coming Soon', path: '/pages/coming-soon', order: 1 },
+      { parentTitle: 'Fallback', title: 'Not Found 404', path: '/pages/not-found-404', order: 2 },
+      { parentTitle: 'Pages', title: 'Authentication', icon: 'LogIn', order: 8 },
+      { parentTitle: 'Authentication', title: 'Sign In', path: '/sign-in', order: 5 },
+
+      // Apps
+      { parentTitle: 'Apps', title: 'Email', path: '/apps/email', icon: 'AtSign', order: 1 },
+      { parentTitle: 'Apps', title: 'Chat', path: '/apps/chat', icon: 'MessageCircle', order: 2 },
+      { parentTitle: 'Apps', title: 'Calendar', path: '/apps/calendar', icon: 'Calendar', order: 3 },
+
+      // UI System
+      { parentTitle: 'UI System', title: 'Colors', path: '/colors', icon: 'SwatchBook', order: 1 },
+      { parentTitle: 'UI System', title: 'Typography', path: '/typography', icon: 'Type', order: 2 },
+      { parentTitle: 'UI System', title: 'UI', icon: 'LayoutGrid', order: 3 },
+      { parentTitle: 'UI', title: 'Accordion', path: '/ui/accordion', order: 1 },
+      { parentTitle: 'UI', title: 'Alert', path: '/ui/alert', order: 2 },
+      { parentTitle: 'UI', title: 'Badge', path: '/ui/badge', order: 6 },
+      { parentTitle: 'UI', title: 'Button', path: '/ui/button', order: 8 },
+      { parentTitle: 'UI', title: 'Card', path: '/ui/card', order: 10 },
+      { parentTitle: 'UI', title: 'Dialog', path: '/ui/dialog', order: 17 },
+      { parentTitle: 'UI', title: 'Form', path: '/ui/form', order: 20 },
+      { parentTitle: 'UI', title: 'Table', path: '/ui/table', order: 40 },
+
+      // Panel
+      { parentTitle: 'Panel', title: 'Workspaces', path: '/panel/workspaces', icon: 'Building2', order: 1 },
+      { parentTitle: 'Panel', title: 'Roles', path: '/panel/roles', icon: 'UserPlus', order: 3 },
+      { parentTitle: 'Panel', title: 'Menus', path: '/panel/menus', icon: 'Menu', order: 4 },
+      { parentTitle: 'Panel', title: 'Permissions', path: '/panel/permissions', icon: 'UserCog', order: 5 },
+    ];
+
+    const createdMenus = new Map<string, any>();
+
+    // 1. Create Root Menus
+    for (const m of menus) {
+      const menu = await prisma.menu.create({
+        data: {
+          tenantId,
+          title: m.title,
+          icon: m.icon,
+          path: m.path,
+          order: m.order,
+          isActive: true,
+        },
+      });
+      createdMenus.set(m.title, menu);
+      // Assign to admin role
+      await prisma.roleMenu.create({ data: { roleId: adminRole.id, menuId: menu.id } });
+    }
+
+    // 2. Create Sub Menus (Recursive-ish for 2-3 levels)
+    // We do multiple passes to ensure parents exist
+    let remaining = [...subMenus];
+    while (remaining.length > 0) {
+      const nextBatch: any[] = [];
+      for (const sm of remaining) {
+        const parent = createdMenus.get(sm.parentTitle);
+        if (parent) {
+          const menu = await prisma.menu.create({
+            data: {
+              tenantId,
+              parentId: parent.id,
+              title: sm.title,
+              icon: sm.icon,
+              path: sm.path,
+              order: sm.order,
+              isActive: true,
+            },
+          });
+          createdMenus.set(sm.title, menu);
+          await prisma.roleMenu.create({ data: { roleId: adminRole.id, menuId: menu.id } });
+        } else {
+          nextBatch.push(sm);
+        }
+      }
+      if (nextBatch.length === remaining.length) break; // Avoid infinite loop if parent not found
+      remaining = nextBatch;
+    }
+  };
+
+  await seedMenus(defaultTenant.id, rolesDefault.adminRole);
+
   console.log('Seed completed successfully!');
-  console.log('--- Configured 3 Tenants ---');
-  console.log(`1. ${defaultTenant.name}`);
-  console.log(`2. ${tenantTwo.name}`);
-  console.log(`3. ${tenantThree.name}`);
-  console.log('\n--- Provisioned 4 Users ---');
-  console.log('admin@example.com / Security@123!');
-  console.log('manager@stark.com / Security@123!');
-  console.log('editor@wayne.com / Security@123!');
-  console.log('viewer@acme.com / Security@123!');
 }
 
 main()

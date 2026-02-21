@@ -2,8 +2,8 @@ import { prisma } from '../../lib/prisma';
 
 export async function listMenusForTenant(tenantId: string) {
   return prisma.menu.findMany({
-    where: { tenantId, isActive: true },
-    include: { children: true, parent: true },
+    where: { tenantId },
+    include: { children: true, parent: true, module: true },
     orderBy: [{ order: 'asc' }, { title: 'asc' }],
   });
 }
@@ -11,15 +11,39 @@ export async function listMenusForTenant(tenantId: string) {
 export async function listMenusForUser(userId: string, tenantId: string) {
   const user = await prisma.user.findFirst({
     where: { id: userId, tenantId },
-    include: { userRoles: { include: { role: { include: { roleMenus: { include: { menu: true } } } } } } },
+    include: {
+      userRoles: {
+        include: {
+          role: {
+            include: {
+              roleMenus: {
+                include: { menu: true }
+              }
+            }
+          }
+        }
+      }
+    },
   });
+
   if (!user) return [];
+
+  const isAdmin = user.userRoles.some((ur) => ur.role.code === "admin" || ur.role.code === "super_admin");
+
+  if (isAdmin) {
+    return prisma.menu.findMany({
+      where: { tenantId, isActive: true },
+      orderBy: [{ order: 'asc' }, { title: 'asc' }],
+    });
+  }
+
   const menuIds = new Set<string>();
   for (const ur of user.userRoles) {
     for (const rm of ur.role.roleMenus) {
       menuIds.add(rm.menuId);
     }
   }
+
   const menus = await prisma.menu.findMany({
     where: { id: { in: Array.from(menuIds) }, tenantId, isActive: true },
     orderBy: [{ order: 'asc' }, { title: 'asc' }],
