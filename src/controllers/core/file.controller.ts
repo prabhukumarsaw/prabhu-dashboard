@@ -1,5 +1,6 @@
 import { Request, Response, type RequestHandler } from 'express';
 import * as fileService from '../../services/core/file.service';
+import { prisma } from '../../lib/prisma';
 import multer from 'multer';
 
 const upload = multer({
@@ -172,5 +173,35 @@ export async function getStats(req: Request, res: Response): Promise<void> {
     res.json({ success: true, data: stats });
   } catch (error: any) {
     res.status(400).json({ success: false, message: error.message });
+  }
+}
+
+export async function servePublicFile(req: Request, res: Response): Promise<void> {
+  const { id, shortId } = req.params;
+  const lookupId = id || shortId;
+
+  try {
+    let file;
+    if (lookupId && lookupId.length < 36) {
+      // Find by prefix for compact professional URLs
+      file = await prisma.file.findFirst({
+        where: {
+          id: { startsWith: lookupId },
+          isPublic: true
+        }
+      });
+    } else {
+      file = await fileService.getFileRecordByIdOnly(lookupId);
+    }
+
+    if (!file) throw new Error('File not found');
+
+    const content = await fileService.getPublicFileContent(file.id);
+
+    res.setHeader('Content-Type', file.mimeType);
+    res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
+    res.send(content);
+  } catch (error: any) {
+    res.status(404).json({ success: false, message: error.message });
   }
 }

@@ -14,14 +14,14 @@ router.get('/:id', requirePermission({ permissionCode: 'menu:read' }), [param('i
 router.post(
   '/',
   requirePermission({ permissionCode: 'menu:create' }),
-  [body('title').notEmpty().trim(), body('path').optional().trim(), body('icon').optional().trim(), body('parentId').optional().isUUID(), body('moduleId').optional().isUUID(), body('order').optional().isInt(), body('permissionCode').optional().trim()],
+  [body('title').notEmpty().trim(), body('path').optional({ nullable: true }).trim(), body('icon').optional({ nullable: true }).trim(), body('parentId').optional({ nullable: true }).isUUID(), body('moduleId').optional({ nullable: true }).isUUID(), body('order').optional({ nullable: true }).isInt(), body('permissionCode').optional({ nullable: true }).trim()],
   validate,
   menuController.create
 );
 router.patch(
   '/:id',
   requirePermission({ permissionCode: 'menu:update' }),
-  [param('id').isUUID(), body('title').optional().trim(), body('path').optional().trim(), body('icon').optional().trim(), body('parentId').optional().isUUID(), body('order').optional().isInt(), body('permissionCode').optional().trim(), body('isActive').optional().isBoolean()],
+  [param('id').isUUID(), body('title').optional().trim(), body('path').optional({ nullable: true }).trim(), body('icon').optional({ nullable: true }).trim(), body('parentId').optional({ nullable: true }).isUUID(), body('order').optional({ nullable: true }).isInt(), body('permissionCode').optional({ nullable: true }).trim(), body('isActive').optional().isBoolean()],
   validate,
   menuController.update
 );

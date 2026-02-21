@@ -85,7 +85,12 @@ export async function uploadFile(input: UploadFileInput) {
   }
 
   // Check tenant quota
-  await checkTenantQuota(tenantId, file.size);
+  const [tenant] = await Promise.all([
+    prisma.tenant.findUnique({ where: { id: tenantId }, select: { slug: true } }),
+    checkTenantQuota(tenantId, file.size)
+  ]);
+
+  const tenantSlug = tenant?.slug || 'unknown';
 
   // Generate unique filename
   const fileId = uuidv4();
@@ -100,10 +105,14 @@ export async function uploadFile(input: UploadFileInput) {
   // Save file
   await fs.writeFile(filePath, file.buffer);
 
-  // Generate public URL
+  // Generate logical, small, and professional public URL
+  const category = ((metadata as any)?.type || 'general').toLowerCase();
+  const safeFileName = file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
+  const shortId = fileId.slice(0, 10);
+
   const publicUrl = isPublic
-    ? `/api/v1/files/public/${fileId}`
-    : `/api/v1/files/${fileId}`;
+    ? `/files/p/${tenantSlug}/${category}/${shortId}/${safeFileName}`
+    : `/files/${fileId}`;
 
   // Save to database
   const fileRecord = await prisma.file.create({
@@ -141,6 +150,21 @@ export async function getFileById(fileId: string, tenantId: string, userId?: str
         { userId },
       ],
     },
+  });
+
+  if (!file) {
+    throw new Error('File not found');
+  }
+
+  return file;
+}
+
+/**
+ * Get file record by ID only (for public access)
+ */
+export async function getFileRecordByIdOnly(fileId: string) {
+  const file = await prisma.file.findUnique({
+    where: { id: fileId },
   });
 
   if (!file) {
@@ -247,6 +271,24 @@ export async function getFileContent(fileId: string, tenantId: string, userId?: 
     return content;
   } catch (err) {
     logger.error('Failed to read file', { fileId, error: err });
+    throw new Error('Failed to read file');
+  }
+}
+
+/**
+ * Get public file content by ID only
+ */
+export async function getPublicFileContent(fileId: string): Promise<Buffer> {
+  const file = await getFileRecordByIdOnly(fileId);
+
+  if (!file.isPublic) {
+    throw new Error('File is not public');
+  }
+
+  try {
+    return await fs.readFile(file.path);
+  } catch (err) {
+    logger.error('Failed to read public file', { fileId, error: err });
     throw new Error('Failed to read file');
   }
 }

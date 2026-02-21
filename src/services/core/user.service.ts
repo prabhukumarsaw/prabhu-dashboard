@@ -9,6 +9,16 @@ export type CreateUserInput = {
   firstName?: string;
   lastName?: string;
   phone?: string;
+  address?: string;
+  state?: string;
+  country?: string;
+  zipCode?: string;
+  organization?: string;
+  currency?: string;
+  locale?: string;
+  timezone?: string;
+  avatar?: string;
+  isActive?: boolean;
   roleIds?: string[];
 };
 
@@ -28,6 +38,7 @@ export type UpdateUserInput = Partial<{
   background: string;
   locale: string;
   timezone: string;
+  avatar: string;
   isActive: boolean;
   roleIds: string[];
 }>;
@@ -74,6 +85,16 @@ export async function createUser(data: CreateUserInput) {
       firstName: data.firstName,
       lastName: data.lastName,
       phone: data.phone,
+      address: data.address,
+      state: data.state,
+      country: data.country,
+      zipCode: data.zipCode,
+      organization: data.organization,
+      currency: data.currency,
+      locale: data.locale,
+      timezone: data.timezone,
+      avatar: data.avatar,
+      isActive: data.isActive !== undefined ? data.isActive : true,
       userRoles: refinedRoleIds.length
         ? { create: refinedRoleIds.map((roleId) => ({ roleId })) }
         : undefined,
@@ -128,7 +149,86 @@ export async function listUsers(tenantId: string, page = 1, limit = 20, search?:
     }),
     prisma.user.count({ where }),
   ]);
-  return { users, total, page, limit };
+  return { users, total, page, limit, pages: Math.ceil(total / limit) };
+}
+
+export async function listAllUsers(
+  page = 1,
+  limit = 20,
+  search?: string,
+  filters?: {
+    email?: string;
+    username?: string;
+    phone?: string;
+    firstName?: string;
+    lastName?: string;
+    fromDate?: string;
+    toDate?: string;
+    status?: string;
+    tenantId?: string;
+  }
+) {
+  const skip = (page - 1) * limit;
+  const where: any = {};
+
+  if (search) {
+    where.OR = [
+      { email: { contains: search, mode: 'insensitive' } },
+      { username: { contains: search, mode: 'insensitive' } },
+      { firstName: { contains: search, mode: 'insensitive' } },
+      { lastName: { contains: search, mode: 'insensitive' } },
+    ];
+  }
+
+  if (filters?.email) where.email = { contains: filters.email, mode: 'insensitive' };
+  if (filters?.username) where.username = { contains: filters.username, mode: 'insensitive' };
+  if (filters?.phone) where.phone = { contains: filters.phone, mode: 'insensitive' };
+  if (filters?.firstName) where.firstName = { contains: filters.firstName, mode: 'insensitive' };
+  if (filters?.lastName) where.lastName = { contains: filters.lastName, mode: 'insensitive' };
+  if (filters?.tenantId) where.tenantId = filters.tenantId;
+
+  if (filters?.fromDate || filters?.toDate) {
+    where.createdAt = {};
+    if (filters.fromDate) where.createdAt.gte = new Date(filters.fromDate);
+    if (filters.toDate) {
+      const toDateObj = new Date(filters.toDate);
+      toDateObj.setHours(23, 59, 59, 999);
+      where.createdAt.lte = toDateObj;
+    }
+  }
+
+  if (filters?.status && filters.status !== 'all') {
+    where.isActive = filters.status === 'active';
+  }
+
+  const [users, total, globalTotal, activeTotal, verifiedTotal] = await Promise.all([
+    prisma.user.findMany({
+      where,
+      skip,
+      take: limit,
+      include: { tenant: true, userRoles: { include: { role: true } } },
+      orderBy: { createdAt: 'desc' },
+    }),
+    prisma.user.count({ where }),
+    prisma.user.count(),
+    prisma.user.count({ where: { isActive: true } }),
+    prisma.user.count({ where: { mfaEnabled: true } })
+  ]);
+
+  return {
+    users,
+    total,
+    page,
+    limit,
+    pages: Math.ceil(total / limit),
+    stats: {
+      total: globalTotal,
+      active: activeTotal,
+      revoked: globalTotal - activeTotal,
+      verified: verifiedTotal,
+      unverified: globalTotal - verifiedTotal
+    }
+  };
 }
 
 export async function getUserById(userId: string, tenantId: string) {

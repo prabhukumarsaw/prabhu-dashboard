@@ -2,8 +2,14 @@ import { Request, Response } from 'express';
 import * as roleService from '../../services/core/role.service';
 
 export async function list(req: Request, res: Response): Promise<void> {
-  const roles = await roleService.listRoles(req.tenantId!);
-  res.json({ success: true, data: { roles } });
+  const { search, page, limit, includeStats } = req.query;
+  const result = await roleService.listRoles(req.tenantId!, {
+    search: search as string,
+    page: page ? parseInt(page as string, 10) : undefined,
+    limit: limit ? parseInt(limit as string, 10) : undefined,
+    includeStats: includeStats === 'true',
+  });
+  res.json({ success: true, data: result });
 }
 
 export async function getById(req: Request, res: Response): Promise<void> {
@@ -33,11 +39,22 @@ export async function update(req: Request, res: Response): Promise<void> {
     const role = await roleService.updateRole(id, req.tenantId!, req.body);
     res.json({ success: true, data: { role } });
   } catch (e: any) {
-    if (e.message?.includes('System roles')) {
+    if (e.message?.includes('System roles') || e.message?.includes('System role code')) {
       res.status(400).json({ success: false, message: e.message });
       return;
     }
     throw e;
+  }
+}
+
+export async function toggleStatus(req: Request, res: Response): Promise<void> {
+  const { id } = req.params;
+  const { isActive } = req.body;
+  try {
+    const role = await roleService.toggleRoleStatus(id, req.tenantId!, isActive);
+    res.json({ success: true, data: { role } });
+  } catch (e: any) {
+    res.status(400).json({ success: false, message: e.message });
   }
 }
 

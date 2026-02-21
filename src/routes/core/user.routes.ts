@@ -9,6 +9,14 @@ const router: ExpressRouter = Router();
 router.use(authRequired);
 
 router.get(
+  '/all',
+  requirePermission({ permissionCode: 'user:read' }),
+  [query('page').optional().isInt({ min: 1 }), query('limit').optional().isInt({ min: 1, max: 100 }), query('search').optional().isString()],
+  validate,
+  userController.listAll
+);
+
+router.get(
   '/',
   requirePermission({ permissionCode: 'user:read' }),
   [query('page').optional().isInt({ min: 1 }), query('limit').optional().isInt({ min: 1, max: 100 }), query('search').optional().isString()],
@@ -34,8 +42,18 @@ router.post(
     body('firstName').optional().trim(),
     body('lastName').optional().trim(),
     body('phone').optional().trim(),
+    body('avatar').optional().isString(),
+    body('isActive').optional().isBoolean(),
     body('roleIds').optional().isArray(),
     body('roleIds.*').optional().isUUID(),
+    body('address').optional().trim(),
+    body('state').optional().trim(),
+    body('country').optional().trim(),
+    body('zipCode').optional().trim(),
+    body('organization').optional().trim(),
+    body('currency').optional().trim(),
+    body('locale').optional().trim(),
+    body('timezone').optional().trim(),
   ],
   validate,
   userController.create
@@ -52,8 +70,17 @@ router.patch(
     body('firstName').optional().trim(),
     body('lastName').optional().trim(),
     body('phone').optional().trim(),
+    body('avatar').optional().isString(),
     body('isActive').optional().isBoolean(),
     body('roleIds').optional().isArray(),
+    body('address').optional().trim(),
+    body('state').optional().trim(),
+    body('country').optional().trim(),
+    body('zipCode').optional().trim(),
+    body('organization').optional().trim(),
+    body('currency').optional().trim(),
+    body('locale').optional().trim(),
+    body('timezone').optional().trim(),
   ],
   validate,
   userController.update

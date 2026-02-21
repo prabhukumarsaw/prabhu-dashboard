@@ -6,6 +6,12 @@ import { validate } from '../../lib';
 
 const router: ExpressRouter = Router();
 
+// Public file access (no auth required)
+// Supports professional compact paths: /p/:tenantSlug/:category/:shortId/:filename
+router.get('/p/:tenantSlug/:category/:shortId/:filename', fileController.servePublicFile);
+// Supports legacy simple paths: /public/:id
+router.get('/public/:id', fileController.servePublicFile);
+
 router.use(authRequired);
 
 // Upload file
